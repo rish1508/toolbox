@@ -4,12 +4,16 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/rish1508/toolbox/cmd/info"
 	"github.com/rish1508/toolbox/cmd/net"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
+
+var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -34,19 +38,60 @@ func Execute() {
 		os.Exit(1)
 	}
 }
-func addSubcommandsPalettes() {
-	rootCmd.AddCommand(net.NetCmd)
-	rootCmd.AddCommand(info.InfoCmd)
+
+func setDefaults() {
+	viper.SetDefault("port", "8080")
 }
+
 func init() {
+	cobra.OnInitialize(initConfig)
+
+	setDefaults()
+
+	// Example of viper
+	// viper.SetDefault("name", "tans")
+	// viper.SetEnvPrefix("TOOLBOX")
+	// viper.BindEnv("name")
+	// fmt.Println("name", viper.Get("name"))
+
+	// err := viper.WriteConfigAs("toolbox.backup.yaml")
+	// if err != nil {
+	// 	fmt.Println(err)
+	// }
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
+	// Add my subcommand palette
+	rootCmd.AddCommand(info.InfoCmd)
+	rootCmd.AddCommand(net.NetCmd)
 
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.toolbox.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.toolbox.yaml)")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	addSubcommandsPalettes()
+}
+
+// initConfig reads in config file and ENV variables if set.
+func initConfig() {
+	if cfgFile != "" {
+		// Use config file from the flag.
+		viper.SetConfigFile(cfgFile)
+	} else {
+		// // Find home directory.
+		home, err := os.UserHomeDir()
+		cobra.CheckErr(err)
+
+		// Search config in home directory with name ".toolbox" (without extension).
+		viper.AddConfigPath(home)
+		viper.SetConfigType("yaml")
+		viper.SetConfigName(".toolbox")
+	}
+
+	viper.AutomaticEnv() // read in environment variables that match
+
+	// If a config file is found, read it in.
+	if err := viper.ReadInConfig(); err == nil {
+		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+	}
 }
